@@ -10,16 +10,19 @@ STLIBS=-lpthread
 
 DISPATCHER_OBJS=dispatcherCore/dispatcher_start.o \
 				dispatcherCore/dispatchDB.o 	  \
-				common/dmsgOp.o 
+				dispatcherCore/dispatch_msg.o     \
+				common/dmsgOp.o 				  
+
 
 ${TARGET2}:${DISPATCHER_OBJS}
 	@echo "Building Dispatcher Library"
 	ar rcs ${TARGET2} ${DISPATCHER_OBJS}
 
-${TARGET3}:dispatcherCore/dispatch_main.cpp ${DISPATCHER_OBJS}
+${TARGET3}:dispatcherCore/dispatch_main.o ${DISPATCHER_OBJS}
 	@ECHO "Building Dispatcher Executables"
 	${CC} -g dispatcherCore/dispatch_main.o ${DISPATCHER_OBJS} -o ${TARGET3} ${STLIBS}
 
+######### dispatcherCore directory #########
 dispatcherCore/dispatch_main.o:dispatcherCore/dispatch_main.cpp
 	${CC} ${CFLAGS} dispatcherCore/dispatch_main.cpp -o dispatcherCore/dispatch_main.o 
 
@@ -29,8 +32,13 @@ dispatcherCore/dispatch_start.o:dispatcherCore/dispatch_start.cpp
 dispatcherCore/dispatchDB.o:dispatcherCore/dispatchDB.cpp
 	${CC} ${CFLAGS} dispatcherCore/dispatchDB.cpp -o dispatcherCore/dispatchDB.o
 
+dispatcherCore/dispatch_msg.o:dispatcherCore/dispatch_msg.cpp
+	${CC} ${CFLAGS} dispatcherCore/dispatch_msg.cpp -o dispatcherCore/dispatch_msg.o
+
+######### common directory #########
 common/dmsgOp.o:common/dmsgOp.cpp
 	${CC} ${CFLAGS} common/dmsgOp.cpp -o common/dmsgOp.o
+
 clean:
 	rm -f *.a
 	rm -f *.exe
@@ -38,3 +46,6 @@ clean:
 	rm -f dispatcherCore/*.o
 	rm -f dispatcherCore/*.a
 	rm -f dispatcherCore/*.exe
+	rm -f common/*.o
+	rm -f common/*.a
+	rm -f common/*.exe

@@ -1,6 +1,13 @@
 #pragma once
 
 #include <stdint.h>
+#include <assert.h>
+#include "../Libs/tlv.h"
+
+#define DISPATCHER_IP_ADDR      2130706433 // 127.0.0.1
+#define DISPATCHER_UDP_PORT     40000
+#define TLV_CODE_NAME           1
+#define TLV_CODE_NAME_LEN       32
 
 typedef enum msg_type_ { 
     SUB_TO_DISPATCH,
@@ -15,7 +22,8 @@ typedef enum subMsgType_ {
     SUB_MSG_DELETE, // publisher unpublishing a new msg or subscriber unsubscribing a new msg
     SUB_MSG_REGISTER,
     SUB_MSG_UNREGISTER,
-    SUB_MSG_ERROR
+    SUB_MSG_ERROR,
+    SUB_MSG_ID_ALLOC_SUCCESS
 } subMsgType_t;
 
 typedef enum dmsgPriority_ {
@@ -24,6 +32,10 @@ typedef enum dmsgPriority_ {
     DMSG_PR_LOW,
     DMSG_PR_MAX
 } dmsgPriority_t;
+
+typedef enum error_codes_ {
+    ERROR_TLV_MISSING
+} errorCodes_t;
 
 typedef struct dmsg_ {
     /* unique ID: allocated by the dispatcher 
@@ -82,6 +94,28 @@ static inline const char *subMsgTypeToString(subMsgType_t sub_msg_type) {
             return "SUB_MSG_UNREGISTER";
         case SUB_MSG_ERROR:
             return "SUB_MSG_ERROR";
+        case SUB_MSG_ID_ALLOC_SUCCESS:
+            return "SUB_MSG_ID_ALLOC_SUCCESS";
     }
     return "UNKNOWN";
+}
+
+static inline const char *tlvStr (int tlv_code_cpoint) {
+    switch (tlv_code_cpoint) {
+        case TLV_CODE_NAME:
+            return "TLV_CODE_NAME";
+        default:
+            return "UNKNOWN";
+    }
+    return "UNKNOWN";
+}
+
+static int tlvDataLen (int tlv_code_point) {
+    switch (tlv_code_point) {
+        case TLV_CODE_NAME:
+            return TLV_CODE_NAME_LEN; 
+        default:
+            return 0;
+    }
+    return 0;
 }
