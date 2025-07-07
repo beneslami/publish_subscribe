@@ -7,6 +7,8 @@
 #include <vector>
 #include <memory>
 #include "config.h"
+#include "../common/comm_type.h"
+#include "../common/ipc_struct.h"
 
 typedef struct publisherDBentry_ {
     char pubName[64];
@@ -24,7 +26,8 @@ typedef struct subscriberDBentry_ {
     char subName[64];
     uint32_t subscriberId;
     uint32_t subscriberMsgIds[MAX_SUBSCRIBED_MSG];
-
+    ipcType_t ipcType;
+    ipcStruct_t ipcStruct;
     subscriberDBentry_() {
         subName[0] = '\0';
         subscriberId = 0;
