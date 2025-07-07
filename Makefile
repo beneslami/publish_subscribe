@@ -5,8 +5,9 @@ TARGET1=clientLib/libclient.a
 TARGET2=dispatcherCore/libdispatch.a
 TARGET3=dispatcherCore/dispatcher.exe
 TARGET4=examples/pub_skt_main.exe
+TARGET5=examples/sub_skt_main.exe
 
-TARGET:${TARGET1} ${TARGET2} ${TARGET3} ${TARGET4}
+TARGET:${TARGET1} ${TARGET2} ${TARGET3} ${TARGET4} ${TARGET5}
 
 STLIBS=-lpthread
 
@@ -32,6 +33,10 @@ ${TARGET3}:dispatcherCore/dispatch_main.o ${DISPATCHER_OBJS}
 ${TARGET4}:examples/pub_skt_main.o examples/pub_skt_example.o ${TARGET1}
 	@echo "Building publisher socket executable"
 	${CC} -g examples/pub_skt_main.o examples/pub_skt_example.o -o ${TARGET4} ${CLIIENTLIBS}
+
+${TARGET5}:examples/sub_skt_main.o examples/sub_skt_example.o ${TARGET1}
+	@echo "Building subscriber socket executable"
+	${CC} -g examples/sub_skt_main.o examples/sub_skt_example.o -o ${TARGET5} ${CLIIENTLIBS}
 
 ######### dispatcherCore directory #########
 dispatcherCore/dispatch_main.o:dispatcherCore/dispatch_main.cpp
