@@ -40,8 +40,13 @@ void *pubSktExample(void *_ipc_struct) {
 
     int pub_id = dmsg.id.publisherId;
     
-    /* Do the stuff here */
-    
+    /* ********** Do the stuff here ********** */
+    publisherPublish (sock_fd, pub_id, 100);
+    std::cout << "Press any key to unpublish\n";
+    getchar();
+    publisherUnPublish(sock_fd, pub_id, 100);
+    /* ********** Do the stuff here ********** */
+
     std::cout << "Press any key to Unregister the publisher\n";
     getchar();
     dispatcherUnregister(sock_fd, pub_id, PUB_TO_DISPATCH);
