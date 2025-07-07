@@ -49,3 +49,73 @@ void dispatcherUnregister(int sock_fd, uint32_t pub_id, msgType_t msg_type) {
     }
     free(dmsg);
 }
+
+/* below two APIs update pubDB only */
+void publisherPublish(int sock_fd, uint32_t pub_id, uint32_t msg_id) {
+    dmsg_t *msg = (dmsg_t*)calloc(1, sizeof(*msg));
+    msg->msgId = 0;
+    msg->msgType = PUB_TO_DISPATCH;
+    msg->subMsgType = SUB_MSG_ADD;
+    msg->msgCode = msg_id;
+    msg->id.publisherId = pub_id;
+    msg->id.subscriberId = pub_id;
+    msg->tlvBufferSize = 0;
+
+    int rc = pubSubDispatchMsg(sock_fd, msg);
+    if(rc < 0) {
+        std::cout << "Client Error: Send failed with errno: " << errno << std::endl;
+    }
+    free(msg);
+}
+
+void publisherUnPublish(int sock_fd, uint32_t pub_id, uint32_t msg_id) {
+    dmsg_t *msg = (dmsg_t*)calloc(1, sizeof(*msg));
+    msg->msgId = 0;
+    msg->msgType = PUB_TO_DISPATCH;
+    msg->subMsgType = SUB_MSG_DELETE;
+    msg->msgCode = msg_id;
+    msg->id.publisherId = pub_id;
+    msg->id.subscriberId = pub_id;
+    msg->tlvBufferSize = 0;
+
+    int rc = pubSubDispatchMsg(sock_fd, msg);
+    if(rc < 0) {
+        std::cout << "Client Error: Send failed with errno: " << errno << std::endl;
+    }
+    free(msg);
+}
+
+/* below two APIs update subDB and pubSubDB */
+void subscriberSubscribe(int sock_fd, uint32_t sub_id, uint32_t msg_id) {
+    dmsg_t *msg = (dmsg_t *)calloc (1, sizeof (*msg));
+    msg->msgId = 0;
+    msg->msgType = SUB_TO_DISPATCH;
+    msg->subMsgType = SUB_MSG_ADD;
+    msg->msgCode = msg_id;
+    msg->id.publisherId = sub_id;
+    msg->id.subscriberId = sub_id;
+    msg->tlvBufferSize = 0;
+
+    int rc = pubSubDispatchMsg(sock_fd, msg);
+    if (rc < 0) {
+        printf ("Client Error : Send Failed, errno = %d\n", errno);
+    }
+    free(msg);
+}
+
+void subscriberUnSubscribe(int sock_fd, uint32_t sub_id, uint32_t msg_id) {
+    dmsg_t *msg = (dmsg_t *)calloc (1, sizeof (*msg));
+    msg->msgId = 0;
+    msg->msgType = SUB_TO_DISPATCH;
+    msg->subMsgType = SUB_MSG_DELETE;
+    msg->msgCode = msg_id;
+    msg->id.publisherId = sub_id;
+    msg->id.subscriberId = sub_id;
+    msg->tlvBufferSize = 0;
+
+    int rc = pubSubDispatchMsg(sock_fd, msg);
+    if (rc < 0) {
+        printf ("Client Error : Send Failed, errno = %d\n", errno);
+    }
+    free(msg);
+}
