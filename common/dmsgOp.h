@@ -4,6 +4,7 @@
 #include "comm_type.h"
 
 void dmsgDebugPrint(dmsg_t *dmsg);
+dmsg_t *dmsgDataPrepare(msgType_t msg_type, subMsgType_t sub_msg_type, uint32_t msg_code, bool alloc_tlv_value_buffers, int tlv_count, ...);
 dmsg_t *dmsgDataPrepare2(msgType_t msg_type, subMsgType_t sub_msg_type, uint32_t msg_code, int trailing_space);
 
 #endif

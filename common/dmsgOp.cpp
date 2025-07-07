@@ -26,6 +26,10 @@ void dmsgDebugPrint(dmsg_t *dmsg) {
     } ITERATE_TLV_END;
 }
 
+dmsg_t *dmsgDataPrepare(msgType_t msg_type, subMsgType_t sub_msg_type, uint32_t msg_code, bool alloc_tlv_value_buffers, int tlv_count, ...) {
+    return NULL;
+}
+
 dmsg_t *dmsgDataPrepare2(msgType_t msg_type, subMsgType_t sub_msg_type, uint32_t msg_code, int trailing_space) {
     dmsg_t *msg = (dmsg_t *)calloc (1, sizeof (dmsg_t) + trailing_space);
     msg->msgId = 0;
