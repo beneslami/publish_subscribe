@@ -7,7 +7,15 @@
 #define DISPATCHER_IP_ADDR      2130706433 // 127.0.0.1
 #define DISPATCHER_UDP_PORT     40000
 #define TLV_CODE_NAME           1
+#define TLV_IPC_TYPE_MSGQ       2   // TLV size 2 Bytes
+#define TLV_IPC_TYPE_UXSKT      3 // TLV size 2 Bytes
+#define TLV_IPC_TYPE_CBK        4
+#define TLV_IPC_NET_UDP_SKT     5
+#define TLV_DATA_128            6
+#define TLV_DATA_256            7
 #define TLV_CODE_NAME_LEN       32
+#define TLV_IPC_NET_SKT_LEN     6 // 4B of IP Address, 2B of port number
+
 
 typedef enum msg_type_ { 
     SUB_TO_DISPATCH,
@@ -23,7 +31,13 @@ typedef enum subMsgType_ {
     SUB_MSG_REGISTER,
     SUB_MSG_UNREGISTER,
     SUB_MSG_ERROR,
-    SUB_MSG_ID_ALLOC_SUCCESS
+    SUB_MSG_REQUEST_ACK,
+    SUB_MSG_ACK_MSG, /* Subscriber sending back ACK*/
+    SUB_MSG_SUBCRIBER_LIST, /* Publisher request COORD to tell him the subscriber List*/
+    SUB_MSG_INFORM_NEW_SUBS, /* Publisher requesting COORD to tell him when new Subsc Join*/
+    SUB_MSG_ID_ALLOC_SUCCESS, /* confirm the generation of Pub/Sub IDs*/
+    SUB_MSG_IPC_CHANNEL_ADD, /* Add IPC Channel */
+    SUB_MSG_IPC_CHANNEL_REMOVE /* Remove IPC Channel */
 } subMsgType_t;
 
 typedef enum dmsgPriority_ {
@@ -100,12 +114,22 @@ static inline const char *subMsgTypeToString(subMsgType_t sub_msg_type) {
     return "UNKNOWN";
 }
 
-static inline const char *tlvStr (int tlv_code_cpoint) {
+static inline const char *tlvStr(int tlv_code_cpoint) {
     switch (tlv_code_cpoint) {
         case TLV_CODE_NAME:
             return "TLV_CODE_NAME";
-        default:
-            return "UNKNOWN";
+        case TLV_IPC_TYPE_MSGQ:
+            return "TLV_IPC_TYPE_MSGQ";
+        case TLV_IPC_TYPE_UXSKT:
+            return "TLV_IPC_TYPE_UXSKT";
+        case TLV_IPC_TYPE_CBK:
+            return "TLV_IPC_TYPE_CBK";
+        case TLV_IPC_NET_UDP_SKT:
+            return "TLV_IPC_NET_UDP_SKT";
+        case TLV_DATA_128:
+            return "TLV_DATA_128";
+        case TLV_DATA_256:
+            return "TLV_DATA_256";
     }
     return "UNKNOWN";
 }
@@ -114,8 +138,18 @@ static int tlvDataLen (int tlv_code_point) {
     switch (tlv_code_point) {
         case TLV_CODE_NAME:
             return TLV_CODE_NAME_LEN; 
-        default:
-            return 0;
+        case TLV_IPC_TYPE_MSGQ:
+            return 64;
+        case TLV_IPC_TYPE_UXSKT:
+            return 64;
+        case TLV_IPC_TYPE_CBK:
+            return sizeof(uintptr_t);
+        case TLV_IPC_NET_UDP_SKT:
+            return TLV_IPC_NET_SKT_LEN;
+        case TLV_DATA_128:
+            return 128;
+        case TLV_DATA_256:
+            return 256;
     }
     return 0;
 }
