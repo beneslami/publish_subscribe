@@ -73,11 +73,11 @@ dmsg_t *dispatcherProcessSubscriberMsg(dmsg_t *msg, uint32_t bytes_read) {
             char *sub_name = tlvBufferGetParticularTlv(tlv_buffer, tlv_bufer_size, TLV_CODE_NAME, &tlv_data_len);
             if (!sub_name) {
                 std::cout << "Dispatcher Error : Subscriber Registration : Subscriber Name TLV Missing\n";
-                return dmsgDataPrepare(DISPATCH_TO_SUB, SUB_MSG_ERROR, ERROR_TLV_MISSING, 1, false, TLV_CODE_NAME);
+                return dmsgDataPrepare2(DISPATCH_TO_SUB, SUB_MSG_ERROR, ERROR_TLV_MISSING, 0);
             }
 
             std::shared_ptr<subscriberDBentry_t> SubEntry = subscriberDbCreate(dispatchGenerateId() , sub_name);
-            dmsg_t *reply_msg = dmsgDataPrepare(DISPATCH_TO_SUB, SUB_MSG_ID_ALLOC_SUCCESS, 0, false, 0);
+            dmsg_t *reply_msg = dmsgDataPrepare2(DISPATCH_TO_SUB, SUB_MSG_ID_ALLOC_SUCCESS, 0, 0);
             reply_msg->id.subscriberId = SubEntry->subscriberId;
             return reply_msg;
         }

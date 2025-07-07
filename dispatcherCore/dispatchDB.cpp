@@ -75,10 +75,41 @@ void subscriberDbDelete(uint32_t sub_id) {
 }
 
 bool subscriberSubscribeMsg(uint32_t sub_id, uint32_t msg_id) {
-
+    subscriberDBentry_t *SubEntry;
+    auto it = subDB.find(sub_id);
+    if (it == subDB.end()) {
+        printf("%s() : Error : Subscriber with ID %u not found.\n", __FUNCTION__, sub_id);
+        return false;
+    }
+    SubEntry = it->second.get();
+    for (int i = 0; i < MAX_SUBSCRIBED_MSG; i++) {
+        if (SubEntry->subscriberMsgIds[i]) {
+            continue;
+        }
+        SubEntry->subscriberMsgIds[i] = msg_id;
+        printf ("Coordinator : Subscriber %s subscribed to message %u Successfully\n", SubEntry->subName, msg_id);
+        break;
+    }
+    pubSubDbCreate(msg_id, it->second);
+    return true;
 }
-bool subscriberUnsubscribeMsg(uint32_t sub_id, uint32_t msg_id) {
 
+bool subscriberUnsubscribeMsg(uint32_t sub_id, uint32_t msg_id) {
+    auto it = subDB.find(sub_id);
+    if (it == subDB.end()) {
+        printf("%s() : Error : Subscriber with ID %u not found.\n", __FUNCTION__, sub_id);
+        return false;
+    }
+    auto& SubEntry = it->second;
+    for (int i = 0; i < MAX_SUBSCRIBED_MSG; i++) {
+
+        if (SubEntry->subscriberMsgIds[i] == msg_id) {
+            SubEntry->subscriberMsgIds[i] = 0;
+            break;
+        }
+    }
+    pubSubDbDelete(msg_id, sub_id);
+    return true;
 }
 /* Subscriber DB Operations end */
 
