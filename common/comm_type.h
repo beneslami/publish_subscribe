@@ -15,7 +15,18 @@
 #define TLV_DATA_256            7
 #define TLV_CODE_NAME_LEN       32
 #define TLV_IPC_NET_SKT_LEN     6 // 4B of IP Address, 2B of port number
+#define TLV_IPC_TYPE_MSGQ_LEN   32
+#define TLV_IPC_TYPE_UXSKT_LEN  32
+#define TLV_IPC_TYPE_CBK_LEN    (sizeof (uintptr_t))
 
+typedef enum ipcType_ {
+    IPC_TYPE_NONE,
+    IPC_TYPE_NETSKT,
+    IPC_TYPE_MSGQ,
+    IPC_TYPE_UXSKT,
+    IPC_TYPE_SHM,
+    IPC_TYPE_CBK
+} ipcType_t;
 
 typedef enum msg_type_ { 
     SUB_TO_DISPATCH,
@@ -76,6 +87,7 @@ typedef struct dmsg_ {
         uint32_t publisherId;
         uint32_t subscriberId;
     }id;
+    uint32_t refCount;
     uint16_t tlvBufferSize;
     char tlvBuffer[0];
 } dmsg_t;
@@ -83,13 +95,13 @@ typedef struct dmsg_ {
 static inline const char *msgTypeToString(msgType_t msg_type) {
     switch (msg_type) {
         case SUB_TO_DISPATCH:
-            return "SUBS_TO_COORD";
+            return "SUB_TO_DISPATCH";
         case DISPATCH_TO_SUB:
-            return "COORD_TO_SUBS";
+            return "DISPATCH_TO_SUB";
         case PUB_TO_DISPATCH:
-            return "PUB_TO_COORD";
+            return "PUB_TO_DISPATCH";
         case DISPATCH_TO_PUB:
-            return "COORD_TO_PUB";
+            return "DISPATCH_TO_PUB";
     }
     return "UNKNOWN";
 }
@@ -110,6 +122,10 @@ static inline const char *subMsgTypeToString(subMsgType_t sub_msg_type) {
             return "SUB_MSG_ERROR";
         case SUB_MSG_ID_ALLOC_SUCCESS:
             return "SUB_MSG_ID_ALLOC_SUCCESS";
+        case SUB_MSG_IPC_CHANNEL_ADD:
+            return "SUB_MSG_IPC_CHANNEL_ADD";
+        case SUB_MSG_IPC_CHANNEL_REMOVE:
+            return "SUB_MSG_IPC_CHANNEL_REMOVE";
     }
     return "UNKNOWN";
 }
@@ -152,4 +168,17 @@ static int tlvDataLen (int tlv_code_point) {
             return 256;
     }
     return 0;
+}
+
+static inline void dmsgReference(dmsg_t *dmsg) {
+    dmsg->refCount++;
+}
+
+static inline void dmsgDereference(dmsg_t *dmsg) {
+    assert(dmsg->refCount);
+    dmsg->refCount--;
+    if(dmsg->refCount == 0) {
+        return;
+    }
+    free(dmsg);
 }

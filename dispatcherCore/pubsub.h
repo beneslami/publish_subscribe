@@ -1,5 +1,3 @@
-// core data structure to keep track of publishers and subscribers
-
 #pragma once
 
 #include <stdint.h>
@@ -7,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include "config.h"
+#include <unistd.h>
 #include "../common/comm_type.h"
 #include "../common/ipc_struct.h"
 
@@ -32,6 +31,13 @@ typedef struct subscriberDBentry_ {
         subName[0] = '\0';
         subscriberId = 0;
         memset(subscriberMsgIds, 0, sizeof(subscriberMsgIds));
+        ipcType = IPC_TYPE_NONE;
+        memset(&ipcStruct, 0 , sizeof(ipcStruct));
+    }
+    ~subscriberDBentry_() {
+        if(ipcType == IPC_TYPE_NETSKT && ipcStruct.netskt.sockFd > 0) {
+            close(ipcStruct.netskt.sockFd);
+        }
     }
 } subscriberDBentry_t;
 

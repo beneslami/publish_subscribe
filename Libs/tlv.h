@@ -15,20 +15,20 @@
  * */
 
 
-#define ITERATE_TLV_BEGIN(start_ptr, type, length, tlv_ptr, tlv_size)           \
-{                                                                               \
+#define ITERATE_TLV_BEGIN(start_ptr, type, length, tlv_ptr, tlv_size)  \
+{                                                                      \
     unsigned int _len = 0; char _tlv_value_size = 0;                   \
-    type = 0; length = 0; tlv_ptr = NULL;                                       \
+    type = 0; length = 0; tlv_ptr = NULL;                              \
     for(tlv_ptr = (char *)start_ptr +                                  \
-             TLV_OVERHEAD_SIZE; _len < tlv_size;                                \
-            _len += _tlv_value_size + TLV_OVERHEAD_SIZE,                        \
-             tlv_ptr = (tlv_ptr + TLV_OVERHEAD_SIZE + length)){                 \
-        type = *(tlv_ptr - TLV_OVERHEAD_SIZE);                                  \
+             TLV_OVERHEAD_SIZE; _len < tlv_size;                       \
+            _len += _tlv_value_size + TLV_OVERHEAD_SIZE,               \
+             tlv_ptr = (tlv_ptr + TLV_OVERHEAD_SIZE + length)){        \
+        type = *(tlv_ptr - TLV_OVERHEAD_SIZE);                         \
         _tlv_value_size = (char)(*(tlv_ptr -                           \
             TLV_OVERHEAD_SIZE + sizeof(char)));                        \
         length = _tlv_value_size;
 
-#define ITERATE_TLV_END            \
+#define ITERATE_TLV_END                                                \
     }}
 
 
@@ -45,7 +45,6 @@ static inline char *tlvBufferGetParticularTlv(char *tlv_buff,              /*Inp
                                                 uint32_t tlv_buff_size,    /*Input TLV Buffer Total Size*/
                                                 uint8_t tlv_no,            /*Input TLV Number*/
                                                 uint8_t *tlv_data_len){    /*Output TLV Data len*/
-
     char tlv_type, tlv_len, *tlv_value = NULL;
     ITERATE_TLV_BEGIN(tlv_buff, tlv_type, tlv_len, tlv_value, tlv_buff_size){
         if(tlv_type != tlv_no) continue;

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <errno.h>
 #include <arpa/inet.h>
+#include "../common/dmsgOp.h"
 #include "../common/comm_type.h"
 #include "../common/ipc_struct.h"
 #include "../clientLib/client.h"
@@ -34,14 +35,23 @@ void *pubSktExample(void *_ipc_struct) {
 
     int rc;
     dmsg_t dmsg;
-    dispatcherRegister(sock_fd, "Publisher1", PUB_TO_DISPATCH);
+    dispatcherRegister(sock_fd, "Pub1", PUB_TO_DISPATCH);
     rc = recvfrom(sock_fd, (char*)&dmsg, sizeof(dmsg), 0, NULL, NULL);
     std::cout << "Publisher is registerd with ID " << dmsg.id.publisherId << std::endl;
 
     int pub_id = dmsg.id.publisherId;
     
     /* ********** Do the stuff here ********** */
-    publisherPublish (sock_fd, pub_id, 100);
+    publisherPublish(sock_fd, pub_id, 100);
+    std::cout << "Press any key to publish the message\n";
+    getchar();
+    dmsg_t *data_msg = dmsgDataPrepare2(PUB_TO_DISPATCH, SUB_MSG_DATA, 100, TLV_OVERHEAD_SIZE + tlvDataLen(TLV_DATA_128));
+    data_msg->id.publisherId = pub_id;
+    data_msg->priority = DMSG_PR_HIGH;
+    //data_msg->refCount = 1;
+    tlvBufferInsertTlv(data_msg->tlvBuffer, data_msg->tlvBufferSize, TLV_DATA_128, (char*)"Test Data from Pub1");
+    pubSubDispatchMsg(sock_fd, data_msg);
+    
     std::cout << "Press any key to unpublish\n";
     getchar();
     publisherUnPublish(sock_fd, pub_id, 100);

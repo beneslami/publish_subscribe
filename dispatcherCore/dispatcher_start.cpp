@@ -13,6 +13,7 @@
 extern void dispatcherDbDisplay();
 extern dmsg_t *dispatcherProcessPublisherMsg(dmsg_t *msg, uint32_t bytes_read);
 extern dmsg_t *dispatcherProcessSubscriberMsg(dmsg_t *msg, uint32_t bytes_read);
+extern void dispatcherForkDistributionThreads();
 
 static void dispatcherReply(int sock_fd, dmsg_t *reply_msg, struct sockaddr_in *client_addr) {
     size_t msg_size_to_send = sizeof(*reply_msg) + reply_msg->tlvBufferSize;
@@ -63,7 +64,7 @@ static void *dispatcherRecvMsgListen(void *arg) {
                 else {
                     std::cout << "Dispatcher: Received message from new Publisher\n";
                 }
-                dmsgDebugPrint(msg);
+                //dmsgDebugPrint(msg);
                 reply_msg = dispatcherProcessPublisherMsg(msg, bytes_read);
                 if(reply_msg) { 
                     dispatcherReply(sock_fd, reply_msg, &client_addr);
@@ -97,5 +98,5 @@ static void dispatcherForkListenerThreads() {
 
 void dispatcherMain() {
     dispatcherForkListenerThreads();
-    //dispatcherForkDistributionThreads();
+    dispatcherForkDistributionThreads();
 }

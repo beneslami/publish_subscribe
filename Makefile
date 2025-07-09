@@ -11,9 +11,10 @@ TARGET:${TARGET1} ${TARGET2} ${TARGET3} ${TARGET4} ${TARGET5}
 
 STLIBS=-lpthread
 
-DISPATCHER_OBJS=dispatcherCore/dispatcher_start.o \
-				dispatcherCore/dispatchDB.o 	  \
-				dispatcherCore/dispatch_msg.o     \
+DISPATCHER_OBJS=dispatcherCore/dispatcher_start.o 			\
+				dispatcherCore/dispatchDB.o 	  			\
+				dispatcherCore/dispatch_msg.o     			\
+				dispatcherCore/dispatch_distribution.o     	\
 				common/dmsgOp.o 				  
 
 CLIIENTLIBS=-LclientLib -lclient
@@ -51,6 +52,9 @@ dispatcherCore/dispatchDB.o:dispatcherCore/dispatchDB.cpp
 dispatcherCore/dispatch_msg.o:dispatcherCore/dispatch_msg.cpp
 	${CC} ${CFLAGS} dispatcherCore/dispatch_msg.cpp -o dispatcherCore/dispatch_msg.o
 
+dispatcherCore/dispatch_distribution.o:dispatcherCore/dispatch_distribution.cpp
+	${CC} ${CFLAGS} dispatcherCore/dispatch_distribution.cpp -o dispatcherCore/dispatch_distribution.o
+	
 ######### common directory #########
 common/dmsgOp.o:common/dmsgOp.cpp
 	${CC} ${CFLAGS} common/dmsgOp.cpp -o common/dmsgOp.o

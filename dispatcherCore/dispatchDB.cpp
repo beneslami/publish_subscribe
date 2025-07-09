@@ -30,7 +30,7 @@ publisherDBentry_t * publisherDbCreate(uint32_t pub_id, char * pub_name) {
         throw std::runtime_error("Memory allocation failed for creating Publisher database");
     }
     pub_entry->publisherId = pub_id;
-    strncpy(pub_entry->pubName, pub_name, 64);
+    strncpy(pub_entry->pubName, pub_name, sizeof(pub_entry->pubName));
     pubDB[pub_id] = pub_entry;
     return pub_entry;
 }
@@ -45,12 +45,39 @@ void publisherDbDelete(uint32_t pub_id) {
 }
 
 bool publisherPublishMsg(uint32_t pub_id, uint32_t published_msg_id) {
-    return pubDB.find(pub_id) != pubDB.end();
+    publisherDBentry_t* PubEntry = NULL;
+    auto it = pubDB.find(pub_id);
+    if (it == pubDB.end()) {
+        return false;
+    }
+    PubEntry = it->second;
+    for (int i = 0; i < MAX_PUBLISHED_MSG; i++) {
+        if (PubEntry->publishedMsgIds[i] == published_msg_id) return false;
+    }
+    for (int i = 0; i < MAX_PUBLISHED_MSG; ++i) {
+        if (PubEntry->publishedMsgIds[i]) continue;
+        PubEntry->publishedMsgIds[i] = published_msg_id;
+        printf ("Dispatcher : Publisher %s published message %u Successfully\n", PubEntry->pubName, published_msg_id);
+        return true;
+    }
+    return false;
     
 }
 
 bool publisherUnpublishMsg(uint32_t pub_id, uint32_t published_msg_id) {
-    return pubDB.find(pub_id) != pubDB.end();
+    publisherDBentry_t* PubEntry = NULL;
+    auto it = pubDB.find(pub_id);
+    if (it == pubDB.end()) {
+        return false;
+    }
+    PubEntry = it->second;
+    for (int i = 0; i < MAX_PUBLISHED_MSG; ++i) {
+        if (PubEntry->publishedMsgIds[i] == published_msg_id) {
+            PubEntry->publishedMsgIds[i] = 0;
+            return true;
+        }
+    }
+    return false;
 }
 /* Publisher DB operations end */
 
@@ -60,18 +87,25 @@ std::shared_ptr<subscriberDBentry_t> subscriberDbCreate(uint32_t sub_id, char *s
         throw std::runtime_error("Subscriber already exists");
         return NULL;
     }
-    std::shared_ptr<subscriberDBentry_t> sub_entry = std::make_shared<subscriberDBentry_t>(subscriberDBentry_t{});
+    std::shared_ptr<subscriberDBentry_t> sub_entry = std::make_shared<subscriberDBentry_t>();
     if(sub_entry == NULL) {
         throw std::runtime_error("Memory allocation failed for creating Subscriber database");
     }
     sub_entry->subscriberId = sub_id;
-    strncpy(sub_entry->subName, sub_name, 64);
+    strncpy(sub_entry->subName, sub_name, sizeof(sub_entry->subName));
     subDB[sub_id] = sub_entry;
     return sub_entry;
 }
 
 void subscriberDbDelete(uint32_t sub_id) {
-    subDB.erase(sub_id);
+    auto it = subDB.find(sub_id);
+    if (it != subDB.end()) {
+        subDB.erase(it);
+        printf("Subscriber with ID %u deleted.\n", sub_id);
+    } else {
+        printf("Subscriber with ID %u Not found.\n", sub_id);
+    }
+    pubSubDbDeleteSubscriber(it->second);
 }
 
 bool subscriberSubscribeMsg(uint32_t sub_id, uint32_t msg_id) {
@@ -114,16 +148,53 @@ bool subscriberUnsubscribeMsg(uint32_t sub_id, uint32_t msg_id) {
 /* Subscriber DB Operations end */
 
 /* Operations on PUB-SUB DB begin */
-pubSubDBentry_t * pubSubDbCreate(uint32_t msg_id, std::shared_ptr<subscriberDBentry_t> su) {
-
+pubSubDBentry_t * pubSubDbCreate(uint32_t msg_id, std::shared_ptr<subscriberDBentry_t> subEntry) {
+    auto it = pubSubDB.find(msg_id);
+    if (it == pubSubDB.end()) {
+        // Create a new entry
+        pubSubDBentry_t* new_entry = new pubSubDBentry_t();
+        new_entry->publishMsgCode = msg_id;
+        new_entry->subscribers.push_back(subEntry);
+        std::cout << "shout out from BEN " << msg_id << std::endl;
+        pubSubDB[msg_id] = new_entry;
+        std::cout << "Created a new pub_sub_db entry for msg_id " << msg_id << "\n";
+        return new_entry;
+    }
+    pubSubDBentry_t* existing_entry = it->second;
+    existing_entry->subscribers.push_back(subEntry);
+    std::cout << "Updated pub_sub_db entry for msg_id " << msg_id << "\n";
+    return existing_entry;
 }
 
 void pubSubDbDelete(uint32_t msg_id, uint32_t sub_id) {
-
+    auto it = pubSubDB.find(msg_id);
+    if (it == pubSubDB.end()) {
+        std::cout << "No pub_sub_db entry found for msg_id " << msg_id << "\n";
+        return;
+    }
+    pubSubDBentry_t* entry = it->second;
+    auto& subscribers = entry->subscribers;
+    for (auto iter = subscribers.begin(); iter != subscribers.end(); ++iter) {
+        if ((*iter)->subscriberId == sub_id) {
+            subscribers.erase(iter);
+            std::cout << "Subscriber with ID " << sub_id << " removed from msg_id " << msg_id << "\n";
+            break;
+        }
+    }
+    if (subscribers.empty()) {
+        delete entry;
+        pubSubDB.erase(it);
+        std::cout << "Deleted pub_sub_db entry for msg_id " << msg_id << "\n";
+    }
 }
 
 pubSubDBentry_t * pubSubDbGet(uint32_t msg_id) {
-
+    auto it = pubSubDB.find(msg_id);
+    if (it == pubSubDB.end()) {
+        std::cout << "No pub_sub_db entry found for msg_id " << msg_id << "\n";
+        return nullptr;
+    }
+    return it->second;
 }
 /* Operations on PUB-SUB DB end */
 
@@ -160,12 +231,12 @@ bool dispatcherProcessSubscriberIpcSubscription(uint32_t sub_id, dmsg_t *dmsg) {
     auto SubEntry = it->second.get();
 
     if (SubEntry->ipcType != IPC_TYPE_NONE) {
-        printf("Coordinator : Error: Subscriber [%s,%u] IPC Channel Already Exists\n", SubEntry->subName, SubEntry->subscriberId);
+        printf("Dispatcher Error: Subscriber [%s,%u] IPC Channel Already Exists\n", SubEntry->subName, SubEntry->subscriberId);
         return false;
     }
 
     if (dmsg->tlvBufferSize == 0) {
-        std::cout << "Coordinator : Error: Subscriber IPC Channel TLV Contains no IPC Data\n";
+        std::cout << "Dispatcher Error: Subscriber IPC Channel TLV Contains no IPC Data\n";
         return false;
     }
 
@@ -182,7 +253,7 @@ bool dispatcherProcessSubscriberIpcSubscription(uint32_t sub_id, dmsg_t *dmsg) {
                     ip_addr = htonl(ip_addr);
                     uint16_t port = *(uint16_t *)(tlv_value + 4);
                     port = htons(port);
-                    printf("Coordinator : Subscriber [%s,%u] IPC Channel Add : IP Address %u, Port %u\n", SubEntry->subName, SubEntry->subscriberId, ip_addr, port);
+                    printf("Dispatcher : Subscriber [%s,%u] IPC Channel Add : IP Address %u, Port %u\n", SubEntry->subName, SubEntry->subscriberId, ip_addr, port);
 
                     SubEntry->ipcType = IPC_TYPE_NETSKT;
                     SubEntry->ipcStruct.netskt.ipAddr = ip_addr;
@@ -195,8 +266,8 @@ bool dispatcherProcessSubscriberIpcSubscription(uint32_t sub_id, dmsg_t *dmsg) {
     return true;
 }
 
-void pubSubDbDeleteSubscriber(std::shared_ptr<pubSubDBentry_t> SubEntry) {
-    /*for (auto it = pubSubDB.begin(); it != pubSubDB.end(); ++it) {
+void pubSubDbDeleteSubscriber(std::shared_ptr<subscriberDBentry_t> SubEntry) {
+    for (auto it = pubSubDB.begin(); it != pubSubDB.end(); ++it) {
         pubSubDBentry_t*pubEntry = it->second;
         auto &subscribers = pubEntry->subscribers;
         subscribers.erase(std::remove(subscribers.begin(), subscribers.end(), SubEntry), subscribers.end());
@@ -206,5 +277,5 @@ void pubSubDbDeleteSubscriber(std::shared_ptr<pubSubDBentry_t> SubEntry) {
         } else {
             ++it;
         }
-    }*/
+    }
 }

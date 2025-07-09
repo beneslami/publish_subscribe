@@ -1,12 +1,28 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <string.h>
 #include <unistd.h>
 #include <iostream>
 #include <errno.h>
 #include <arpa/inet.h>
 #include "../Libs/tlv.h"
 #include "client.h"
+
+static int ipcTypeToTlvType(ipcType_t ipc_type) {
+    switch (ipc_type) {
+        case IPC_TYPE_MSGQ:
+            return TLV_IPC_TYPE_MSGQ;
+        case IPC_TYPE_UXSKT:
+            return TLV_IPC_TYPE_UXSKT;
+        case IPC_TYPE_NETSKT:
+            return TLV_IPC_NET_UDP_SKT;
+        case IPC_TYPE_CBK:
+            return TLV_IPC_TYPE_CBK;
+        default:
+            return 0;
+    }
+}
 
 int pubSubDispatchMsg(int sock_fd, dmsg_t *dmsg) {
     struct sockaddr_in server_addr;
@@ -87,7 +103,7 @@ void publisherUnPublish(int sock_fd, uint32_t pub_id, uint32_t msg_id) {
 
 /* below two APIs update subDB and pubSubDB */
 void subscriberSubscribe(int sock_fd, uint32_t sub_id, uint32_t msg_id) {
-    dmsg_t *msg = (dmsg_t *)calloc (1, sizeof (*msg));
+    dmsg_t *msg = (dmsg_t *)calloc (1, sizeof(*msg));
     msg->msgId = 0;
     msg->msgType = SUB_TO_DISPATCH;
     msg->subMsgType = SUB_MSG_ADD;
@@ -118,4 +134,58 @@ void subscriberUnSubscribe(int sock_fd, uint32_t sub_id, uint32_t msg_id) {
         printf ("Client Error : Send Failed, errno = %d\n", errno);
     }
     free(msg);
+}
+
+void subscriberSubscribeIpcChannel(int sock_fd, uint32_t sub_id, ipcType_t ipc_type, ipcStruct_t *ipc_struct) {
+    int ipc_tlv = ipcTypeToTlvType(ipc_type);
+    if(!ipc_tlv) {
+        std::cout << "Client Error: Invalid IPC Type\n";
+        return;
+    }
+    uint8_t tlv_size = tlvDataLen(ipc_tlv);
+    dmsg_t *subscriber_ipc_msg = dmsgDataPrepare2(SUB_TO_DISPATCH, SUB_MSG_IPC_CHANNEL_ADD, 0, TLV_OVERHEAD_SIZE + tlv_size);
+    subscriber_ipc_msg->id.subscriberId = sub_id;
+    subscriber_ipc_msg->msgId = 0; // This will be assigned by the Dispatcher
+    char *tlv_buffer = (char *)subscriber_ipc_msg->tlvBuffer;
+    uint8_t tlv_buffer_len = subscriber_ipc_msg->tlvBufferSize;
+    tlvBufferInsertTlv(tlv_buffer, ipc_tlv, tlv_size, NULL);
+    char *ipc_tlv_value = tlv_buffer + TLV_OVERHEAD_SIZE;
+    switch (ipc_tlv) {
+        case TLV_IPC_NET_UDP_SKT: {
+            uint32_t *ip_addr = (uint32_t *)(ipc_tlv_value);
+            *ip_addr = htonl(ipc_struct->netskt.ipAddr);
+            uint16_t *port = (uint16_t *)(ipc_tlv_value + 4);
+            *port = htons(ipc_struct->netskt.port);
+        }
+        break;
+
+        case TLV_IPC_TYPE_CBK: {
+            pubSubCbk_t *cbk = (pubSubCbk_t *)ipc_tlv_value;
+            *cbk = ipc_struct->cbk.cbk;
+        }
+        break;
+
+        case TLV_IPC_TYPE_MSGQ: {
+            char *msgq_name = (char *)ipc_tlv_value;
+            strncpy (msgq_name, ipc_struct->msgq.MsgQName, 
+                sizeof(ipc_struct->msgq.MsgQName));
+        }
+        break;
+
+        case TLV_IPC_TYPE_UXSKT: {
+            char *uxskt_name = (char *)ipc_tlv_value;
+            strncpy(uxskt_name, ipc_struct->uxskt.UnixSktName, sizeof(ipc_struct->uxskt.UnixSktName));
+        }
+        break;
+
+        default:
+            std::cout << "Client Error : Invalid IPC Type\n";
+            free(subscriber_ipc_msg);
+            return;
+    }
+    int rc = pubSubDispatchMsg(sock_fd, subscriber_ipc_msg);
+    if (rc < 0) {
+        std::cout << "Client Error : Send Failed, errno = " << errno << std::endl;
+    }
+    free(subscriber_ipc_msg);
 }

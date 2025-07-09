@@ -19,7 +19,7 @@ bool subscriberUnsubscribeMsg(uint32_t sub_id, uint32_t msg_id);
 pubSubDBentry_t *pubSubDbCreate(uint32_t msg_id, std::shared_ptr<subscriberDBentry_t> su);
 void pubSubDbDelete(uint32_t msg_id, uint32_t sub_id);
 pubSubDBentry_t *pubSubDbGet(uint32_t msg_id);
-void pubSubDbDeleteSubscriber(std::shared_ptr<pubSubDBentry_t> SubEntry);
+void pubSubDbDeleteSubscriber(std::shared_ptr<subscriberDBentry_t> SubEntry);
 
 void dispatcherDbDisplay();
 bool dispatcherProcessSubscriberIpcSubscription(uint32_t sub_id, dmsg_t *cmsg);
