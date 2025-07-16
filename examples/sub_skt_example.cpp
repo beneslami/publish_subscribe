@@ -44,7 +44,7 @@ void *subSktExample(void *_ipc_struct) {
     subscriberSubscribeIpcChannel(sock_fd, sub_id, IPC_TYPE_NETSKT, &ipc_struct2);
     while (1) {
         std::cout << "Subscriber now waiting for msgs from Dispatcher\n";
-        rc = recvfrom (sock_fd, (char *)buffer, sizeof (buffer), 0, NULL, NULL);
+        rc = recvfrom (sock_fd, (char *)buffer, sizeof(buffer), 0, NULL, NULL);
         dmsg_t *recv_msg = (dmsg_t *)buffer;
         std::cout << "Subscriber : Msg recvd from Dispatcher\n";
         char *tlv_buffer = recv_msg->tlvBuffer;
@@ -56,6 +56,7 @@ void *subSktExample(void *_ipc_struct) {
             continue;
         }
         std::cout << "Data Message recvd by Subscriber " << "[" << sub_id << "] is : " << tlv_value << "\n\n";
+        //dmsgDebugPrint(recv_msg);
     }
 
     std::cout << "Press any key to unsubscribe\n";
