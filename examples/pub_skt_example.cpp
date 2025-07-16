@@ -48,8 +48,8 @@ void *pubSktExample(void *_ipc_struct) {
     dmsg_t *data_msg = dmsgDataPrepare2(PUB_TO_DISPATCH, SUB_MSG_DATA, 100, TLV_OVERHEAD_SIZE + tlvDataLen(TLV_DATA_128));
     data_msg->id.publisherId = pub_id;
     data_msg->priority = DMSG_PR_HIGH;
-    //data_msg->refCount = 1;
-    tlvBufferInsertTlv(data_msg->tlvBuffer, data_msg->tlvBufferSize, TLV_DATA_128, (char*)"Test Data from Pub1");
+    data_msg->refCount = 1;
+    tlvBufferInsertTlv(data_msg->tlvBuffer, TLV_DATA_128, tlvDataLen(TLV_DATA_128), (char*)"Test Data from Pub1");
     pubSubDispatchMsg(sock_fd, data_msg);
     
     std::cout << "Press any key to unpublish\n";
