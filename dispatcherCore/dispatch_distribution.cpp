@@ -72,7 +72,7 @@ class DispatcherQueue {
 static class DispatcherQueue *globalListQueue[DISPATCHER_DIST_QUEUES_MAX] = {0};
 
 static void dispatcherDispatch(std::shared_ptr<subscriberDBentry_t>SubEntry, dmsg_t *dmsg) {
-    printf ("Dispatcher : Dispatching message to subscriber\n");
+    std::cout << "Dispatcher : Dispatching message to subscriber\n";
     dmsgDebugPrint(dmsg);
     if (SubEntry->ipcType == IPC_TYPE_NONE) {
         printf ("Dispatcher : Error : Subscriber [%s, %u] IPC Channel Not Set\n", SubEntry->subName, SubEntry->subscriberId);
@@ -80,8 +80,7 @@ static void dispatcherDispatch(std::shared_ptr<subscriberDBentry_t>SubEntry, dms
     }
     switch (SubEntry->ipcType) {
         case IPC_TYPE_NETSKT: {
-            printf ("Dispatcher : Dispatching message to subscriber [%s, %u] over NETSKT\n",   
-                SubEntry->subName, SubEntry->subscriberId);
+            printf ("Dispatcher : Dispatching message to subscriber [%s, %u] over NETSKT\n", SubEntry->subName, SubEntry->subscriberId);
             uint32_t ip_addr = SubEntry->ipcStruct.netskt.ipAddr;
             uint16_t port = SubEntry->ipcStruct.netskt.port;
             uint8_t transport_type = SubEntry->ipcStruct.netskt.transportType;
@@ -94,8 +93,7 @@ static void dispatcherDispatch(std::shared_ptr<subscriberDBentry_t>SubEntry, dms
             server_addr.sin_port = htons(port);
             server_addr.sin_addr.s_addr = htonl(ip_addr);
             if (SubEntry->ipcStruct.netskt.sockFd > 0) {
-                int rc = sendto (SubEntry->ipcStruct.netskt.sockFd, (char *)dmsg, sizeof(*dmsg) + dmsg->tlvBufferSize, 0, 
-                    (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
+                int rc = sendto(SubEntry->ipcStruct.netskt.sockFd, (char *)dmsg, sizeof(*dmsg) + dmsg->tlvBufferSize, 0, (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
                 if (rc < 0) {
                     printf ("Dispatcher : Error : Send Failed, errno = %d\n", errno);
                 }
@@ -107,7 +105,7 @@ static void dispatcherDispatch(std::shared_ptr<subscriberDBentry_t>SubEntry, dms
                 return;
             }
             SubEntry->ipcStruct.netskt.sockFd = sock_fd;
-            int rc = sendto (sock_fd, (char *)dmsg, sizeof (*dmsg) + dmsg->tlvBufferSize, 0, (struct sockaddr *)&server_addr, sizeof (struct sockaddr));
+            int rc = sendto (sock_fd, (char *)dmsg, sizeof(*dmsg) + dmsg->tlvBufferSize, 0, (struct sockaddr *)&server_addr, sizeof (struct sockaddr));
             if (rc < 0) {
                 printf ("Dispatcher : Error : Send Failed, errno = %d\n", errno);
             }
