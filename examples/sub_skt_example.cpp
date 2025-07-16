@@ -10,41 +10,36 @@
 #include "../common/ipc_struct.h"
 
 void *subSktExample(void *_ipc_struct) {
-    int sock_fd;
-    static char buffer[1024];
-    ipcStruct_t *ipc_struct = (ipcStruct_t *)_ipc_struct;
-    sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (sock_fd == -1) {
-        printf ("Error : Socket Creation Failed\n");
-        return 0;
-    }
-    struct sockaddr_in self_addr;
-    self_addr.sin_family = AF_INET;
-    self_addr.sin_port = htons(ipc_struct->netskt.port);
-    self_addr.sin_addr.s_addr = htonl(ipc_struct->netskt.ipAddr);
-    if (bind(sock_fd, (struct sockaddr *)&self_addr, sizeof(struct sockaddr)) == -1) {
-        printf("Dispatcher Error : bind failed - error: %u\n", errno);
-        close (sock_fd);
+    ipcStruct_t *ipc_struct = (ipcStruct_t*)_ipc_struct;
+    SubscriberClient *subClient = new SubscriberClient(ipc_struct);
+    
+    subClient->dispatcherRegister("Sub1", SUB_TO_DISPATCH);
+    char buff[1024];
+    int rc = subClient->receiveFrom(buff, sizeof(buff));
+    if(rc < 0) {
+        std::cout << "Error receiving from Dispatcher\n";
         exit(1);
     }
-    int rc; 
-    dmsg_t dmsg;
-    dispatcherRegister(sock_fd, "Sub1", SUB_TO_DISPATCH);
-    rc = recvfrom (sock_fd, (char *)&dmsg, sizeof (dmsg), 0, NULL, NULL);
-    std::cout << "Sub Msg ID allocated = " << dmsg.id.subscriberId << std::endl;
-    int sub_id = dmsg.id.subscriberId;
+    dmsg_t *dmsg = (dmsg_t*)buff;
+    std::cout << "Sub Msg ID allocated = " << dmsg->id.subscriberId << std::endl;
+    int sub_id = dmsg->id.subscriberId;
 
     /* ********** Do the stuff here ********** */
-    subscriberSubscribe(sock_fd, sub_id, 100);
+    subClient->subscriberSubscribe(sub_id, 100);
     ipcStruct_t ipc_struct2;
-    ipc_struct2.netskt.ipAddr = INADDR_ANY;
-    ipc_struct2.netskt.port = htons(self_addr.sin_port);
+    ipc_struct2.netskt.ipAddr = ipc_struct->netskt.ipAddr;
+    ipc_struct2.netskt.port = ipc_struct->netskt.port;
     std::cout << "press any key to report IPC channel socket to the dispatcher\n";
     getchar();
-    subscriberSubscribeIpcChannel(sock_fd, sub_id, IPC_TYPE_NETSKT, &ipc_struct2);
+    subClient->subscriberSubscribeIpcChannel(sub_id, IPC_TYPE_NETSKT, &ipc_struct2);
+    static char buffer[1024];
     while (1) {
         std::cout << "Subscriber now waiting for msgs from Dispatcher\n";
-        rc = recvfrom (sock_fd, (char *)buffer, sizeof(buffer), 0, NULL, NULL);
+        int rc = subClient->receiveFrom(buffer, sizeof(buffer));
+        if(rc < 0) {
+            std::cout << "Error receiveing from the Dispatcher\n";
+            exit(1);
+        }
         dmsg_t *recv_msg = (dmsg_t *)buffer;
         std::cout << "Subscriber : Msg recvd from Dispatcher\n";
         char *tlv_buffer = recv_msg->tlvBuffer;
@@ -55,15 +50,14 @@ void *subSktExample(void *_ipc_struct) {
             std::cout << "Error : No TLV_DATA found in TLV buffer\n";
             continue;
         }
-        std::cout << "Data Message recvd by Subscriber " << "[" << sub_id << "] is : " << tlv_value << "\n\n";
+        std::cout << "Data Message received by Subscriber " << "[" << sub_id << "] is : " << tlv_value << "\n\n";
         //dmsgDebugPrint(recv_msg);
     }
 
     std::cout << "Press any key to unsubscribe\n";
     getchar();
-    subscriberUnSubscribe(sock_fd, sub_id, 100);
+    subClient->subscriberUnSubscribe(sub_id, 100);
     /* ********** Do the stuff here ********** */
     
-    close(sock_fd);
     return 0;
 }
