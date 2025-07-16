@@ -32,7 +32,7 @@
     }}
 
 
-static inline char* tlvBufferInsertTlv(char  *buff, uint8_t tlv_no, uint8_t data_len, char *data) {
+static inline char* tlvBufferInsertTlv(char *buff, uint8_t tlv_no, uint8_t data_len, char *data) {
     *buff = tlv_no;
     *(buff+1) = data_len;
     if (data) {
