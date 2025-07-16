@@ -21,7 +21,7 @@ void dmsgDebugPrint(dmsg_t *dmsg) {
     ITERATE_TLV_BEGIN(tlv_buffer, tlv_type, tlv_len, tlv_value, tlv_buffer_size) {
         std::cout <<  "TLV Type : "   << tlv_type << " | ";
         std::cout <<  "TLV Length : " << tlv_len << " | ";
-        std::cout <<  "TLV Value : "  << tlv_value << " | ";
+        std::cout <<  "TLV Value : "  << tlv_value << " |\n";
 
     } ITERATE_TLV_END;
 }
@@ -31,7 +31,7 @@ dmsg_t *dmsgDataPrepare(msgType_t msg_type, subMsgType_t sub_msg_type, uint32_t 
 }
 
 dmsg_t *dmsgDataPrepare2(msgType_t msg_type, subMsgType_t sub_msg_type, uint32_t msg_code, int trailing_space) {
-    dmsg_t *msg = (dmsg_t *)calloc (1, sizeof (dmsg_t) + trailing_space);
+    dmsg_t *msg = (dmsg_t *)calloc(1, sizeof(dmsg_t) + trailing_space);
     msg->msgId = 0;
     msg->msgType = msg_type;
     msg->subMsgType = sub_msg_type;
