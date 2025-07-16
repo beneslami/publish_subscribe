@@ -24,16 +24,38 @@ static int ipcTypeToTlvType(ipcType_t ipc_type) {
     }
 }
 
-int pubSubDispatchMsg(int sock_fd, dmsg_t *dmsg) {
+Client::Client(ipcStruct_t *ipc_struct) {
+    _ipcStruct = ipc_struct;
+    _sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (_sockfd == -1) {
+        std::cout << "Error : Socket Creation Failed\n";
+        exit(1);
+    }
+    struct sockaddr_in self_addr;
+    self_addr.sin_family = AF_INET;
+    self_addr.sin_port = htons(_ipcStruct->netskt.port);
+    self_addr.sin_addr.s_addr = htonl(_ipcStruct->netskt.ipAddr);
+    if (bind(_sockfd, (struct sockaddr *)&self_addr, sizeof(struct sockaddr)) == -1) {
+        std::cout << "Dispatcher Error : bind failed - error: " << errno << std::endl;
+        close(_sockfd);
+        exit(1);
+    }
+}
+
+Client::~Client() {
+    close(_sockfd);
+}
+
+int Client::pubSubDispatchMsg(dmsg_t *dmsg) {
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(DISPATCHER_UDP_PORT);
     server_addr.sin_addr.s_addr = htonl(DISPATCHER_IP_ADDR);
-    int rc = sendto(sock_fd, (char*)dmsg, sizeof(*dmsg) + dmsg->tlvBufferSize, 0, (struct sockaddr*)&server_addr, sizeof(struct sockaddr));
+    int rc = sendto(_sockfd, (char*)dmsg, sizeof(*dmsg) + dmsg->tlvBufferSize, 0, (struct sockaddr*)&server_addr, sizeof(struct sockaddr));
     return rc;
 }
 
-void dispatcherRegister(int sock_fd, const char *entitiy_name, msgType_t msg_type) {
+void Client::dispatcherRegister(const char *entitiy_name, msgType_t msg_type) {
     dmsg_t *dmsg = (dmsg_t*)calloc(1, sizeof(*dmsg) + TLV_OVERHEAD_SIZE + TLV_CODE_NAME_LEN);
     dmsg->msgId = 0;
     dmsg->msgType = msg_type;
@@ -43,14 +65,14 @@ void dispatcherRegister(int sock_fd, const char *entitiy_name, msgType_t msg_typ
     dmsg->tlvBufferSize = TLV_OVERHEAD_SIZE + TLV_CODE_NAME_LEN;
     char *tlv_buffer = (char*)dmsg->tlvBuffer;
     tlvBufferInsertTlv(tlv_buffer, TLV_CODE_NAME, TLV_CODE_NAME_LEN, (char*)entitiy_name);
-    int rc = pubSubDispatchMsg(sock_fd, dmsg);
+    int rc = pubSubDispatchMsg(dmsg);
     if(rc < 0) {
         std::cout << "Error sending to The dispatcher\n";
     }
     free(dmsg);
 }
 
-void dispatcherUnregister(int sock_fd, uint32_t pub_id, msgType_t msg_type) {
+void Client::dispatcherUnregister(uint32_t pub_id, msgType_t msg_type) {
     dmsg_t *dmsg = (dmsg_t*)calloc(1, sizeof(*dmsg));
     dmsg->msgId = 0;
     dmsg->msgType = msg_type;
@@ -59,15 +81,29 @@ void dispatcherUnregister(int sock_fd, uint32_t pub_id, msgType_t msg_type) {
     dmsg->id.subscriberId = pub_id;
     dmsg->tlvBufferSize = 0;
     
-    int rc = pubSubDispatchMsg(sock_fd, dmsg);
+    int rc = pubSubDispatchMsg(dmsg);
     if(rc < 0) {
         std::cout << "Client Error: Send failed - errno = " << errno << std::endl;
     }
     free(dmsg);
 }
 
-/* below two APIs update pubDB only */
-void publisherPublish(int sock_fd, uint32_t pub_id, uint32_t msg_id) {
+int Client::receiveFrom(char *msg, size_t size) {
+    int rc = recvfrom(_sockfd, msg, size, 0, NULL, NULL);
+    return rc;
+}
+
+// ################################################################################################ //
+
+PublisherClient::PublisherClient(ipcStruct_t * ipc_struct) : Client(ipc_struct) {
+
+}
+
+PublisherClient::~PublisherClient() {
+
+}
+
+void PublisherClient::publisherPublish(uint32_t pub_id, uint32_t msg_id) {
     dmsg_t *msg = (dmsg_t*)calloc(1, sizeof(*msg));
     msg->msgId = 0;
     msg->msgType = PUB_TO_DISPATCH;
@@ -77,14 +113,14 @@ void publisherPublish(int sock_fd, uint32_t pub_id, uint32_t msg_id) {
     msg->id.subscriberId = pub_id;
     msg->tlvBufferSize = 0;
 
-    int rc = pubSubDispatchMsg(sock_fd, msg);
+    int rc = pubSubDispatchMsg(msg);
     if(rc < 0) {
         std::cout << "Client Error: Send failed with errno: " << errno << std::endl;
     }
     free(msg);
 }
 
-void publisherUnPublish(int sock_fd, uint32_t pub_id, uint32_t msg_id) {
+void PublisherClient::publisherUnPublish(uint32_t pub_id, uint32_t msg_id) {
     dmsg_t *msg = (dmsg_t*)calloc(1, sizeof(*msg));
     msg->msgId = 0;
     msg->msgType = PUB_TO_DISPATCH;
@@ -94,15 +130,24 @@ void publisherUnPublish(int sock_fd, uint32_t pub_id, uint32_t msg_id) {
     msg->id.subscriberId = pub_id;
     msg->tlvBufferSize = 0;
 
-    int rc = pubSubDispatchMsg(sock_fd, msg);
+    int rc = pubSubDispatchMsg(msg);
     if(rc < 0) {
         std::cout << "Client Error: Send failed with errno: " << errno << std::endl;
     }
     free(msg);
 }
 
-/* below two APIs update subDB and pubSubDB */
-void subscriberSubscribe(int sock_fd, uint32_t sub_id, uint32_t msg_id) {
+// ################################################################################################ //
+
+SubscriberClient::SubscriberClient(ipcStruct_t * ipc_struct) : Client(ipc_struct) {
+
+}
+
+SubscriberClient::~SubscriberClient() {
+
+}
+
+void SubscriberClient::subscriberSubscribe(uint32_t sub_id, uint32_t msg_id) {
     dmsg_t *msg = (dmsg_t *)calloc (1, sizeof(*msg));
     msg->msgId = 0;
     msg->msgType = SUB_TO_DISPATCH;
@@ -112,14 +157,14 @@ void subscriberSubscribe(int sock_fd, uint32_t sub_id, uint32_t msg_id) {
     msg->id.subscriberId = sub_id;
     msg->tlvBufferSize = 0;
 
-    int rc = pubSubDispatchMsg(sock_fd, msg);
+    int rc = pubSubDispatchMsg(msg);
     if (rc < 0) {
         printf ("Client Error : Send Failed, errno = %d\n", errno);
     }
     free(msg);
 }
 
-void subscriberUnSubscribe(int sock_fd, uint32_t sub_id, uint32_t msg_id) {
+void SubscriberClient::subscriberUnSubscribe(uint32_t sub_id, uint32_t msg_id) {
     dmsg_t *msg = (dmsg_t *)calloc (1, sizeof (*msg));
     msg->msgId = 0;
     msg->msgType = SUB_TO_DISPATCH;
@@ -129,14 +174,14 @@ void subscriberUnSubscribe(int sock_fd, uint32_t sub_id, uint32_t msg_id) {
     msg->id.subscriberId = sub_id;
     msg->tlvBufferSize = 0;
 
-    int rc = pubSubDispatchMsg(sock_fd, msg);
+    int rc = pubSubDispatchMsg(msg);
     if (rc < 0) {
         printf ("Client Error : Send Failed, errno = %d\n", errno);
     }
     free(msg);
 }
 
-void subscriberSubscribeIpcChannel(int sock_fd, uint32_t sub_id, ipcType_t ipc_type, ipcStruct_t *ipc_struct) {
+void SubscriberClient::subscriberSubscribeIpcChannel(uint32_t sub_id, ipcType_t ipc_type, ipcStruct_t *ipc_struct) {
     int ipc_tlv = ipcTypeToTlvType(ipc_type);
     if(!ipc_tlv) {
         std::cout << "Client Error: Invalid IPC Type\n";
@@ -183,7 +228,7 @@ void subscriberSubscribeIpcChannel(int sock_fd, uint32_t sub_id, ipcType_t ipc_t
             free(subscriber_ipc_msg);
             return;
     }
-    int rc = pubSubDispatchMsg(sock_fd, subscriber_ipc_msg);
+    int rc = pubSubDispatchMsg(subscriber_ipc_msg);
     if (rc < 0) {
         std::cout << "Client Error : Send Failed, errno = " << errno << std::endl;
     }
