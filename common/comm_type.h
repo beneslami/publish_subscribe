@@ -177,7 +177,7 @@ static inline void dmsgReference(dmsg_t *dmsg) {
 static inline void dmsgDereference(dmsg_t *dmsg) {
     assert(dmsg->refCount);
     dmsg->refCount--;
-    if(dmsg->refCount == 0) {
+    if(dmsg->refCount) {
         return;
     }
     free(dmsg);
